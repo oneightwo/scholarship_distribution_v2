@@ -11,4 +11,5 @@ class StudentServiceApplication
 
 fun main(args: Array<String>) {
     runApplication<StudentServiceApplication>(*args)
+
 }

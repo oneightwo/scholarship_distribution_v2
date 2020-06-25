@@ -1,0 +1,17 @@
+/.idea/
+/student_service/HELP.md
+/student_service/mvnw
+/student_service/mvnw.cmd
+/authorization_service/target/
+/authorization_service/authorization_service.iml
+/authorization_service/HELP.md
+/authorization_service/mvnw
+/authorization_service/mvnw.cmd
+/common_models/
+/student_service/target/
+/student_service/HELP.md
+/student_service/mvnw
+/student_service/mvnw.cmd
+/student_service/student_service.iml
+/student_service/.mvn/
+/authorization_service/.mvn/

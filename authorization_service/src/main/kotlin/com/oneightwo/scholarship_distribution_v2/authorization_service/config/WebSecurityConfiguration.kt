@@ -23,8 +23,6 @@ class WebSecurityConfiguration : WebSecurityConfigurerAdapter() {
     @Bean
     fun passwordEncoder(): PasswordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder()
 
-
-
     override fun configure(auth: AuthenticationManagerBuilder) {
         auth
                 .userDetailsService(userDetailsService)

@@ -5,7 +5,7 @@ import javax.persistence.*
 
 @Entity
 @Table(name = "courses")
-data class Course(
+class Course(
         @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
         @Column(name = "student_id")
         var id: Long? = null,
