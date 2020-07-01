@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: storage_service
+  mvc:
+    throw-exception-if-no-handler-found: true
+  resources:
+    add-mappings: false
   datasource:
     url: jdbc:postgresql://localhost:5432/sd_student_db
     username: postgres

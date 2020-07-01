@@ -60,16 +60,29 @@ class StudentsController {
 
     //---Additional---
 
+//    @GetMapping
+//    private fun getStudents(
+//        @RequestParam year: Int,
+//        @RequestParam semester: String,
+//        @PageableDefault(page = 0, size = 100) //ОШИБКА: столбец "ddf" не существует
+//        @SortDefault(sort = ["surname"], direction = Sort.Direction.ASC) pageable: Pageable
+//    ): ResponseEntity<Any> {
+//        return ResponseEntity.ok(studentService.getStudentBySemesterAndYear(
+//            Semester.getSemesterByName(semester),
+//            year,
+//            pageable
+//        )
+//            .map { TransformationHelper.entityToDto(it) })
+//    }
+
     @GetMapping
-    private fun getStudents(
-        @RequestParam year: Int,
-        @RequestParam semester: String,
+    private fun getStudentsf(
         @PageableDefault(page = 0, size = 100) //ОШИБКА: столбец "ddf" не существует
         @SortDefault(sort = ["surname"], direction = Sort.Direction.ASC) pageable: Pageable
     ): ResponseEntity<Any> {
         return ResponseEntity.ok(studentService.getStudentBySemesterAndYear(
-            Semester.getSemesterByName(semester),
-            year,
+            Semester.getSemesterByName(Semester.AUTUMN.name),
+            2020,
             pageable
         )
             .map { TransformationHelper.entityToDto(it) })

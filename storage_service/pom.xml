@@ -57,6 +57,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
         <dependency>
             <groupId>com.oneightwo.scholarship_distribution_v2</groupId>
             <artifactId>common_service</artifactId>

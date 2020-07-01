@@ -23,7 +23,7 @@ class UniversityServiceImpl : UniversityService {
     override fun save(t: University): University = universityRepository.save(t)
 
     override fun update(t: University): University {
-        find(t.id ?: throw ObjectNotFoundException("Student not found"))
+        find(t.id ?: throw ObjectNotFoundException("University not found"))
         return universityRepository.save(t)
     }
 
