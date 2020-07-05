@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort
 import org.springframework.data.web.PageableDefault
 import org.springframework.data.web.SortDefault
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -35,6 +36,7 @@ class UniversityController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_operator')")
     fun findUniversity(@PathVariable id: Long): ResponseEntity<Any> {
         return ResponseEntity.ok(TransformationHelper.entityToDto(universityService.find(id)))
     }
@@ -64,6 +66,7 @@ class UniversityController {
     //---Additional---
 
     @GetMapping
+    @PreAuthorize("hasRole('ROLE_admin')")
     fun getUniversities(): ResponseEntity<Any> {
         return ResponseEntity.ok(universityService.getAll().map { TransformationHelper.entityToDto(it) })
     }

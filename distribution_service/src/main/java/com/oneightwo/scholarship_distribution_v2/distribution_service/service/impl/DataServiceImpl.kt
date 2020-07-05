@@ -2,8 +2,10 @@ package com.oneightwo.scholarship_distribution_v2.distribution_service.service.i
 
 import com.oneightwo.scholarship_distribution_v2.constants.LOCALHOST
 import com.oneightwo.scholarship_distribution_v2.constants.SCIENCE_DIRECTIONS_URL
+import com.oneightwo.scholarship_distribution_v2.constants.UNIVERSITIES_URL
 import com.oneightwo.scholarship_distribution_v2.distribution_service.service.DataService
 import com.oneightwo.scholarship_distribution_v2.models.ScienceDirectionDTO
+import com.oneightwo.scholarship_distribution_v2.models.UniversityDTO
 import com.oneightwo.scholarship_distribution_v2.tools.logger
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.ParameterizedTypeReference
@@ -24,6 +26,15 @@ class DataServiceImpl : DataService {
             HttpMethod.GET,
             null,
             object : ParameterizedTypeReference<List<ScienceDirectionDTO>>() {}
+        )
+        return responseEntity.body ?: listOf()
+    }
+
+    override fun getUniversities(): List<UniversityDTO> {
+        val responseEntity = restTemplate.exchange("$LOCALHOST:7447$UNIVERSITIES_URL",
+            HttpMethod.GET,
+            null,
+            object : ParameterizedTypeReference<List<UniversityDTO>>() {}
         )
         return responseEntity.body ?: listOf()
     }

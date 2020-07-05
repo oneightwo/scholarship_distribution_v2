@@ -6,6 +6,7 @@ import com.oneightwo.scholarship_distribution_v2.distribution_service.constants.
 import com.oneightwo.scholarship_distribution_v2.distribution_service.service.DataService
 import com.oneightwo.scholarship_distribution_v2.distribution_service.service.DistributionService
 import com.oneightwo.scholarship_distribution_v2.models.StudentDTO
+import com.oneightwo.scholarship_distribution_v2.tools.logger
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.*
@@ -15,9 +16,12 @@ import kotlin.collections.HashMap
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
+import kotlin.math.round
 
 @Component
 class DistributionServiceImpl : DistributionService {
+
+    private val log = logger(DistributionServiceImpl::class.java)
 
     @Autowired
     private lateinit var dataService: DataService
@@ -54,7 +58,7 @@ class DistributionServiceImpl : DistributionService {
      * @return Map<Направление>, Список студентов>
      */
     private fun divisionOfDirection(students: List<StudentDTO>): Map<Long, MutableList<StudentDTO>> {
-        val divisionList = hashMapOf<Long, MutableList<StudentDTO>>().apply {
+        val divisionList = mutableMapOf<Long, MutableList<StudentDTO>>().apply {
             dataService.getScienceDirections().forEach {
                 if (it.id != null) {
                     put(it.id!!, arrayListOf())
@@ -72,8 +76,8 @@ class DistributionServiceImpl : DistributionService {
      * @param directionsStudentsMap Map<Направление>, Список студентов>
      * @return Map<Тип (прошли, не прошли), Map<Направление, Список студентов>>
      */
-    private fun selectionByMinimalRatingAndDirection(directionsStudentsMap: Map<Long, List<StudentDTO>>): Map<Type, Map<Long, ArrayList<StudentDTO>>> {
-        val selectionMap = hashMapOf<Type, Map<Long, ArrayList<StudentDTO>>>().apply {
+    private fun selectionByMinimalRatingAndDirection(directionsStudentsMap: Map<Long, List<StudentDTO>>): Map<Type, Map<Long, List<StudentDTO>>> {
+        val selectionMap = mutableMapOf<Type, Map<Long, ArrayList<StudentDTO>>>().apply {
             put(Type.PASSED, mutableMapOf<Long, ArrayList<StudentDTO>>().apply {
                 directionsStudentsMap.forEach { (k, _) ->
                     put(k, arrayListOf())
@@ -99,13 +103,12 @@ class DistributionServiceImpl : DistributionService {
     }
 
     /**
-     * перерасчет среднего рейтинга направлениий по прошедшим студентам
+     * перерасчет среднего рейтинга направлениию или университету по прошедшим студентам
      * @param directionsStudentsMap Map<Направление>, Список студентов> прошедших студентов
      * @return Map<Направление>, Средний рейтинг>
      */
-    private fun calculationRatingForDirections(directionsStudentsMap: Map<Long, ArrayList<StudentDTO>>): Map<Long, Double> {
-        val ratingMap: MutableMap<Long, Double> = hashMapOf()
-
+    private fun calculationAverageRatingByAnything(directionsStudentsMap: Map<Long, List<StudentDTO>>): Map<Long, Double> {
+        val ratingMap = mutableMapOf<Long, Double>()
         directionsStudentsMap.forEach { (k, v) ->
             var counter = 0.0
             v.forEach { student ->
@@ -123,279 +126,136 @@ class DistributionServiceImpl : DistributionService {
      * @return Map<Any (направления/университеты), Количество стипендий>
      */
     private fun distributionScholarshipByAny(
-        anyStudentsMap: Map<String, List<StudentDTO>>?,
+        anyStudentsMap: Map<Long, List<StudentDTO>>,
         quantity: Long
-    ): Map<String, Long?> {
-        var scholarshipByCandidates: MutableMap<String, Long?> =
-            object : HashMap<String?, Long?>() {
-                init {
-                    anyStudentsMap!!.forEach { (key: String?, value: List<StudentDTO>?) -> put(key, -1L) }
-                }
-            }
-        val result: MutableMap<String, Long?> = object : HashMap<String?, Long?>() {
-            init {
-                anyStudentsMap!!.forEach { (key: String?, value: List<StudentDTO>?) ->
-                    put(
-                        key,
-                        0L
-                    )
-                }
-            }
-        }
-        val relationshipRatingByCandidates: MutableMap<String, Double> =
-            HashMap()
-        var ratingByDirection =
-            calculationRatingForDirections(anyStudentsMap)
-        var sumRating: Double = sumDouble(ratingByDirection.values)
+    ): Map<Long, Long> {
+        val result = mutableMapOf<Long, Long>()
+        val iterationResult = mutableMapOf<Long, Long>()
+        var averageRatingByAnything = calculationAverageRatingByAnything(anyStudentsMap)
+        val relationshipRatingByAnything = mutableMapOf<Long, Double>()
+        var sumRating = averageRatingByAnything.values.sum()
         var free = quantity
+
         while (free != 0L) {
-            val finalSumRating = sumRating
-            ratingByDirection.forEach { (key: String, value: Double?) ->
-                relationshipRatingByCandidates[key] = value!! / finalSumRating
+            averageRatingByAnything.forEach { (k, v) ->
+                relationshipRatingByAnything[k] = v / sumRating
             }
-            val finalFree = free
-            val finalFree1 = free
-            if (relationshipRatingByCandidates.values.stream()
-                    .allMatch { v: Double -> Math.round(v * finalFree1) == 0L }
-            ) {
-                var finalKey = ""
+            if (relationshipRatingByAnything.values.all { round(it * free) == 0.0 }) {
+                var idAny: Long?
                 if (free > 0) {
-                    log.info("result => {}", result)
-                    scholarshipByCandidates = result.entries.stream()
-                        .filter { e: Map.Entry<String, Long?> ->
-                            anyStudentsMap!![e.key]!!.size > result[e.key]!!
-                        }
-                        .collect(
-                            Collectors.toMap<Map.Entry<String, Long?>, String, Long?>(
-                                { java.util.Map.Entry.key }
-                            ) { java.util.Map.Entry.value }
-                        )
-                    log.info("scholarshipByCandidates => {}", scholarshipByCandidates)
-                    var maxRating = 0.0
-                    for ((key, value) in ratingByDirection) {
-                        if (maxRating < value!! && scholarshipByCandidates.containsKey(key)) {
-                            maxRating = value
-                            finalKey = key
-                        }
-                    }
-                    scholarshipByCandidates[finalKey] = result[finalKey]!! + 1L
+                    idAny = averageRatingByAnything.maxBy { it.value }?.key
+                    iterationResult[idAny!!] = 1L
                 } else {
-                    var minRating: Double? = 101.0
-                    scholarshipByCandidates = result.entries.stream()
-                        .filter { e: Map.Entry<String, Long?> -> e.value!! >= 1 }
-                        .collect(
-                            Collectors.toMap<Map.Entry<String, Long?>, String, Long?>(
-                                { java.util.Map.Entry.key }
-                            ) { java.util.Map.Entry.value }
-                        )
-                    val finalScholarshipByCandidates: Map<String, Long?> =
-                        scholarshipByCandidates
-                    ratingByDirection = calculationRatingForDirections(
-                        anyStudentsMap!!.entries.stream()
-                            .filter { e: Map.Entry<String, List<StudentDTO>> ->
-                                finalScholarshipByCandidates.containsKey(e.key)
-                            }
-                            .collect(
-                                Collectors.toMap<Map.Entry<String, List<StudentDTO>>, String, List<StudentDTO>>(
-                                    { java.util.Map.Entry.key }
-                                ) { java.util.Map.Entry.value }
-                            )
-                    )
-                    log.info("scholarshipByCandidates = {}", scholarshipByCandidates)
-                    log.info("ratingByDirection = {}", ratingByDirection)
-                    for (key in scholarshipByCandidates.keys) {
-                        if (ratingByDirection.containsKey(key) && minRating!! > ratingByDirection[key]!!) {
-                            minRating = ratingByDirection[key]
-                            finalKey = key
-                        }
-                    }
-                    log.info("minRating = {}", minRating)
-                    log.info("keyMinRating = {}", finalKey)
-                    scholarshipByCandidates[finalKey] = scholarshipByCandidates[finalKey]!! - 1L
+                    idAny = averageRatingByAnything.minBy { it.value }?.key
+                    iterationResult[idAny!!] = -1L
                 }
-                result[finalKey] = scholarshipByCandidates[finalKey]
             } else {
-                for ((s, v) in relationshipRatingByCandidates) {
-                    if (scholarshipByCandidates.containsKey(s)) {
-                        scholarshipByCandidates[s] = Math.round(finalFree * relationshipRatingByCandidates[s]!!)
-                    }
-                }
-                for (k in scholarshipByCandidates.keys) {
-                    while (scholarshipByCandidates[k]!! > anyStudentsMap!![k]!!.size - result[k]!!) {
-                        scholarshipByCandidates[k] = scholarshipByCandidates[k]!! - 1
-                    }
-                }
-                for ((key, value) in scholarshipByCandidates) {
-                    if (result.containsKey(key)) {
-                        result[key] = result[key]!! + value!!
+                relationshipRatingByAnything.forEach { (k, v) ->
+                    val preliminaryValue = (v * free).toLong()
+                    val freePlaces = anyStudentsMap[k]!!.size.toLong() - result.getOrDefault(k, 0)
+                    if (preliminaryValue > freePlaces) {
+                        iterationResult[k] = freePlaces
                     } else {
-                        result[key] = value
+                        iterationResult[k] = preliminaryValue
                     }
                 }
             }
-            scholarshipByCandidates = scholarshipByCandidates.entries.stream()
-                .filter { e: Map.Entry<String, Long?> ->
-                    result[e.key] != anyStudentsMap!![e.key]!!.size
-                }
-                .collect(
-                    Collectors.toMap<Map.Entry<String, Long?>, String, Long?>(
-                        { java.util.Map.Entry.key }
-                    ) { java.util.Map.Entry.value }
-                )
-            val finalScholarshipByCandidates1: Map<String, Long?> = scholarshipByCandidates
-            ratingByDirection = calculationRatingForDirections(
-                anyStudentsMap!!.entries.stream()
-                    .filter { e: Map.Entry<String, List<StudentDTO>> ->
-                        finalScholarshipByCandidates1.containsKey(e.key)
-                    }
-                    .collect(
-                        Collectors.toMap<Map.Entry<String, List<StudentDTO>>, String, List<StudentDTO>>(
-                            { java.util.Map.Entry.key }
-                        ) { java.util.Map.Entry.value }
-                    )
-            )
-            sumRating = sumDouble(ratingByDirection.values)
-            relationshipRatingByCandidates.clear()
-            free = quantity - sumLong(result.values)
-            log.info("result -> {}", result)
-            log.info("resultSum -> {}", sumLong(result.values))
-            log.info("count -> {}", quantity)
-            log.info("free -> {}", free)
+            iterationResult.forEach { (k, v) ->
+                result[k] = result.getOrDefault(k, 0) + v
+            }
+            free = quantity - result.values.sum()
+            averageRatingByAnything = calculationAverageRatingByAnything(anyStudentsMap.filter { (k, v) ->
+                result.getOrDefault(k, -1) > v.size
+            })
+            sumRating = averageRatingByAnything.values.sum()
+            iterationResult.clear()
+            relationshipRatingByAnything.clear()
         }
         return result
     }
 
     /**
      * разделение студентов университетов по направлениям
-     * @param directionsStudentsMap Map<Направление></Направление>, Список студентов>
-     * @return Map<Направление></Направление>, Map<Университет></Университет>, Список студентов>>
+     * @param directionsStudentsMap Map<Направление, Список студентов>
+     * @return Map<Направление, Map<Университет, Список студентов>>
      */
-    private fun divisionUniversitiesByDirection(directionsStudentsMap: Map<String, List<StudentDTO>>): Map<String, MutableMap<String, List<StudentDTO>?>?>? {
-        val map: MutableMap<String, MutableMap<String, List<StudentDTO>?>?> =
-            object :
-                HashMap<String?, Map<String?, List<StudentDTO?>?>?>() {
-                init {
-                    scienceDirectionService.getAll().forEach { scienceDirection ->
-                        put(
-                            scienceDirection.getName(),
-                            HashMap<String, List<StudentDTO>>()
-                        )
+    private fun divisionUniversitiesByDirection(directionsStudentsMap: Map<Long, List<StudentDTO>>): MutableMap<Long, MutableMap<Long, ArrayList<StudentDTO>>> {
+        val result = mutableMapOf<Long, MutableMap<Long, ArrayList<StudentDTO>>>().apply {
+            dataService.getScienceDirections().forEach { sdit ->
+                put(sdit.id!!, mutableMapOf<Long, ArrayList<StudentDTO>>().apply {
+                    dataService.getUniversities().forEach { uit ->
+                        put(uit.id!!, arrayListOf())
                     }
-                }
-            }
-        for (d in map.keys) {
-            for (student in directionsStudentsMap[d]!!) {
-                val u: String = student.getUniversity().getAbbreviation()
-                val listMap: MutableMap<String, List<StudentDTO>?>? =
-                    map[d]
-                if (listMap!!.containsKey(u)) {
-                    listMap[u].add(student)
-                } else {
-                    listMap[u] = ArrayList<StudentDTO>()
-                    listMap[u].add(student)
-                }
-                map[d] = listMap
+                })
             }
         }
-        for (k in map.keys) {
-            var c = 0
-            for (k1 in map[k]!!.keys) {
-                c += map[k]!![k1]!!.size
+
+        var list: List<String> = ArrayList<String>()
+        list.add("huy")
+
+        directionsStudentsMap.forEach { (_, v) ->
+            v.forEach {
+                result[it.scienceDirectionId]!![it.universityId]!!.add(it)
             }
-            log.info("k={}, size({})", k, c)
         }
-        return map
+        return result
     }
 
     /**
      * распределение стипендий по университетам внутри направлений
-     * @param directionsMapUniversitiesStudentsMap Map<Направление></Направление>, Map<Университет></Университет>, Список студентов>>
-     * @param directionsQuantityMap Map<Направление></Направление>, Количество стипендий>
-     * @return Map<Направление></Направление>, Map<Университет></Университет>, Количество стипендий>>
+     * @param directionsMapUniversitiesStudentsMap Map<Направление, Map<Университет, Список студентов>>
+     * @param directionsQuantityMap Map<Направление, Количество стипендий>
+     * @return Map<Направление, Map<Университет, Количество стипендий>>
      */
     private fun distributionOfScholarshipsByUniversityWithinDirections(
-        directionsMapUniversitiesStudentsMap: Map<String, Map<String, List<StudentDTO>>>,
-        directionsQuantityMap: Map<String, Long>
-    ): Map<String, Map<String, Long>>? {
-        val distributionScholarshipByUniversities: MutableMap<String, Map<String, Long>> =
-            HashMap()
-        for ((k, v) in directionsQuantityMap) {
-            distributionScholarshipByUniversities[k] =
-                distributionScholarshipByAny(directionsMapUniversitiesStudentsMap[k], v)
-        }
-        for ((key, value) in distributionScholarshipByUniversities) {
-            var sum = 0
-            for ((_, value1) in value) {
-                (sum += value1).toInt()
+        directionsMapUniversitiesStudentsMap: Map<Long, Map<Long, List<StudentDTO>>>,
+        directionsQuantityMap: Map<Long, Long>
+    ): MutableMap<Long, Map<Long, Long>> {
+        val result = mutableMapOf<Long, Map<Long, Long>>()
+
+        directionsQuantityMap.forEach { (k, v) ->
+            if (directionsMapUniversitiesStudentsMap.containsKey(k)) {
+                result[k] = distributionScholarshipByAny(directionsMapUniversitiesStudentsMap[k]!!, v)
             }
-            log.info("На {} выделено {}", key, sum)
         }
-        return distributionScholarshipByUniversities
+        return result
     }
 
     /**
      * сортировка студентов внутри направления в университетах по рейтингу
-     * @param directionsMapUniversitiesStudentsMap Map<Направление></Направление>, Map<Университет></Университет>, Список студентов>>
-     * @return Map<Направление></Направление>, Map<Университет></Университет>, Список студентов>>
+     * @param directionsMapUniversitiesStudentsMap Map<Направление, Map<Университет, Список студентов>>
+     * @return Map<Направление, Map<Университет, Список студентов>>
      */
-    private fun sortedByRatingsWithinUniversities(directionsMapUniversitiesStudentsMap: Map<String, Map<String, List<StudentDTO>>>): Map<String, Map<String, List<StudentDTO>>>? {
-        val sortedByDirectionsAndUniversities: MutableMap<String, Map<String, List<StudentDTO>>> =
-            HashMap<String, Map<String, List<StudentDTO>>>()
-        for ((key, value) in directionsMapUniversitiesStudentsMap) {
-            var list: List<StudentDTO> = ArrayList<StudentDTO>()
-            val map: MutableMap<String, List<StudentDTO>> =
-                HashMap<String, List<StudentDTO>>()
-            sortedByDirectionsAndUniversities[key] = value
-            for ((key1, value1) in value) {
-                list = value1.stream()
-                    .sorted(Comparator.comparingInt<Any>(StudentDTO::getRating).reversed())
-                    .collect(Collectors.toList<Any>())
-                map[key1] = list
+    private fun sortedByRatingsWithinUniversities(
+        directionsMapUniversitiesStudentsMap: Map<Long, Map<Long, List<StudentDTO>>>
+    ): MutableMap<Long, Map<Long, List<StudentDTO>>> {
+
+        directionsMapUniversitiesStudentsMap.forEach { (_, v) ->
+            v.values.map { lit ->
+                lit.sortedBy { sit -> sit.rating }
             }
-            sortedByDirectionsAndUniversities[key] = map
         }
-        return sortedByDirectionsAndUniversities
+        return directionsMapUniversitiesStudentsMap.toMutableMap()
     }
 
     /**
      * получение студетнов победителей по университетам
-     * @param quantityPlaces Map<Направление></Направление>, Map<Университет></Университет>, Количество стипендий>>
-     * @param directionsMapUniversitiesStudentsMap Map<Направление></Направление>, Map<Университет></Университет>, Список студентов>>
-     * @return Map<Университет></Университет>, Список студентов>
+     * @param quantityPlaces Map<Направление, Map<Университет, Количество стипендий>>
+     * @param directionsMapUniversitiesStudentsMap Map<Направление, Map<Университет, Список студентов>>
+     * @return Map<Университет, Список студентов>
      */
     private fun getWinnersStudents(
-        quantityPlaces: Map<String, Map<String, Long>>,
-        directionsMapUniversitiesStudentsMap: Map<String, Map<String, List<StudentDTO>>>
-    ): Map<String, List<StudentDTO>?>? {
-        val winnersList: MutableMap<String, List<StudentDTO>?> =
-            HashMap<String, List<StudentDTO>?>()
-        for ((key, value) in directionsMapUniversitiesStudentsMap) {
-            for ((key1, value1) in value) {
-                if (winnersList.containsKey(key1)) {
-                    val list: List<StudentDTO>? = winnersList[key1]
-                    list.addAll(value1.subList(0, quantityPlaces[key]!![key1]!!.toInt()))
-                    winnersList[key1] = list
-                } else {
-                    winnersList[key1] = value1.subList(0, quantityPlaces[key]!![key1]!!.toInt())
-                }
-                log.info(
-                    "направление=({}) вуз=({}) мест=({}) поместится=({})",
-                    key,
-                    key1,
-                    quantityPlaces[key]!![key1],
-                    winnersList[key1]!!.size + value1.subList(
-                        0,
-                        quantityPlaces[key]!![key1]!!.toInt()
-                    ).size
-                )
+        quantityPlaces: Map<Long, Map<Long, Long>>,
+        directionsMapUniversitiesStudentsMap: Map<Long, Map<Long, List<StudentDTO>>>
+    ): Map<Long, List<StudentDTO>> {
+        val winnersList = mutableMapOf<Long, ArrayList<StudentDTO>>()
+
+        quantityPlaces.forEach { (d, v) ->
+            v.forEach { (u, v1) ->
+                if (!winnersList.containsKey(u)) winnersList[u] = arrayListOf()
+                winnersList[u]!!.addAll(directionsMapUniversitiesStudentsMap[d]!![u]!!.slice(0..v1.toInt()))
             }
         }
-        var sum = 0
-        for ((key, value) in winnersList) {
-            log.info("k={}, v={}", key, value!!.size)
-            sum += value.size
-        }
-        log.info("sum={}", sum)
         return winnersList
     }
 
