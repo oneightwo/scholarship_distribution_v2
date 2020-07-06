@@ -8,6 +8,7 @@ import com.oneightwo.scholarship_distribution_v2.storage_service.models.Course
 import com.oneightwo.scholarship_distribution_v2.storage_service.models.ScienceDirection
 import com.oneightwo.scholarship_distribution_v2.storage_service.models.Student
 import com.oneightwo.scholarship_distribution_v2.storage_service.models.University
+import java.time.LocalDateTime
 
 class TransformationHelper {
 
@@ -72,6 +73,7 @@ class TransformationHelper {
             studentDTO.c14,
             studentDTO.c15,
             studentDTO.rating,
+            LocalDateTime.now(),
             studentDTO.isValid
         )
 

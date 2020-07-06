@@ -2,6 +2,7 @@ package com.oneightwo.scholarship_distribution_v2.distribution_service.service.i
 
 import com.oneightwo.scholarship_distribution_v2.constants.Semester
 import com.oneightwo.scholarship_distribution_v2.distribution_service.constants.MINIMUM_PERCENTAGE_BORDER
+import com.oneightwo.scholarship_distribution_v2.distribution_service.constants.NUMBER_SCHOLARSHIPS
 import com.oneightwo.scholarship_distribution_v2.distribution_service.constants.Type
 import com.oneightwo.scholarship_distribution_v2.distribution_service.service.DataService
 import com.oneightwo.scholarship_distribution_v2.distribution_service.service.DistributionService
@@ -190,9 +191,6 @@ class DistributionServiceImpl : DistributionService {
             }
         }
 
-        var list: List<String> = ArrayList<String>()
-        list.add("huy")
-
         directionsStudentsMap.forEach { (_, v) ->
             v.forEach {
                 result[it.scienceDirectionId]!![it.universityId]!!.add(it)
@@ -259,15 +257,31 @@ class DistributionServiceImpl : DistributionService {
         return winnersList
     }
 
+    private fun distributionScholarship(students: List<StudentDTO>):  {
+
+    }
+
     override fun getCountScholarshipsByDirectionAndUniversities(
         semester: Semester,
         year: Int
-    ): Map<String, Map<String, Long>> {
-        TODO("Not yet implemented")
+    ): Map<Long, Map<Long, Long>> {
+        return mapOf()
     }
 
-    override fun getWinnerStudents(semester: Semester, year: Int): Map<String, List<StudentDTO>> {
-        TODO("Not yet implemented")
+    override fun getWinnerStudents(semester: Semester, year: Int): Map<Long, List<StudentDTO>> {
+        val students = dataService.getStudentByMonthAndYear()
+        val divisionOfDirection = divisionOfDirection(students)
+        val selectionByMinimalRatingAndDirection = selectionByMinimalRatingAndDirection(divisionOfDirection)
+        val distributionScholarshipByAny =
+            distributionScholarshipByAny(selectionByMinimalRatingAndDirection[Type.PASSED]!!, NUMBER_SCHOLARSHIPS)
+        val divisionUniversitiesByDirection =
+            divisionUniversitiesByDirection(selectionByMinimalRatingAndDirection[Type.PASSED]!!)
+        val distributionOfScholarshipsByUniversityWithinDirections =
+            distributionOfScholarshipsByUniversityWithinDirections(
+                divisionUniversitiesByDirection,
+                distributionScholarshipByAny
+            )
+        return getWinnersStudents(distributionOfScholarshipsByUniversityWithinDirections, sortedByRatingsWithinUniversities(divisionUniversitiesByDirection))
     }
 
     override fun getLoserStudents(semester: Semester, year: Int): Map<String, List<StudentDTO>> {

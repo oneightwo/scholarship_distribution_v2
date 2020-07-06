@@ -1,6 +1,7 @@
 package com.oneightwo.scholarship_distribution_v2.storage_service.models
 
 import java.io.Serializable
+import java.time.LocalDateTime
 import javax.persistence.*
 
 @Entity
@@ -88,6 +89,9 @@ class Student(
 
         @Column(nullable = false)
         var rating: Float = 0F,
+
+        @Column(nullable = false)
+        var data_registration: LocalDateTime,
 
         @Column(nullable = false)
         var isValid: Boolean = false

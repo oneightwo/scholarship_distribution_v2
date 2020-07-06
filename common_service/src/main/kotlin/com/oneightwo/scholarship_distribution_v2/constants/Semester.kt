@@ -16,5 +16,12 @@ enum class Semester(val semesters: List<Int>) {
                 throw SemesterNotFoundException()
             }
         }
+        @Throws(SemesterNotFoundException::class)
+        fun getSemesterByMonth(month: Int): Semester {
+            values().forEach { value ->
+                if (value.semesters.contains(month)) return value
+            }
+            throw SemesterNotFoundException()
+        }
     }
 }

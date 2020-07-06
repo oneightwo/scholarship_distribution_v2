@@ -12,6 +12,7 @@ import org.springframework.data.web.PageableDefault
 import org.springframework.data.web.SortDefault
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.time.LocalDateTime
 
 @RestController
 @RequestMapping(value = [STUDENTS_URL])
@@ -76,15 +77,19 @@ class StudentsController {
 //    }
 
     @GetMapping
-    private fun getStudentsf(
-        @PageableDefault(page = 0, size = 100) //ОШИБКА: столбец "ddf" не существует
+    private fun getStudents(
+        @RequestParam year: Int?,
+        @RequestParam semester: String?,
+        @PageableDefault(page = 0, size = 9999) //ОШИБКА: столбец "ddf" не существует
         @SortDefault(sort = ["surname"], direction = Sort.Direction.ASC) pageable: Pageable
     ): ResponseEntity<Any> {
-        return ResponseEntity.ok(studentService.getStudentBySemesterAndYear(
-            Semester.getSemesterByName(Semester.AUTUMN.name),
-            2020,
-            pageable
-        )
-            .map { TransformationHelper.entityToDto(it) })
+        return ResponseEntity.ok(
+            studentService.getStudentBySemesterAndYear(
+                if (semester == null) Semester.getSemesterByMonth(LocalDateTime.now().monthValue)
+                else Semester.getSemesterByName(semester),
+                year ?: LocalDateTime.now().year,
+                pageable
+            )
+                .map { TransformationHelper.entityToDto(it) })
     }
 }

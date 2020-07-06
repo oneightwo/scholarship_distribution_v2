@@ -28,7 +28,7 @@ interface DistributionService {
      * @param year год распределения
      * @return Map<Направление></Направление>, Map<Университет></Университет>, Кол-во стипендий>>
      */
-    fun getCountScholarshipsByDirectionAndUniversities(semester: Semester, year: Int): Map<String, Map<String, Long>>
+    fun getCountScholarshipsByDirectionAndUniversities(semester: Semester, year: Int): Map<Long, Map<Long, Long>>
 
     /**
      * получение студентов победителей
@@ -36,7 +36,7 @@ interface DistributionService {
      * @param year год
      * @return Map<Универсиет></Универсиет>, Студенты>
      */
-    fun getWinnerStudents(semester: Semester, year: Int): Map<String, List<StudentDTO>>
+    fun getWinnerStudents(semester: Semester, year: Int): Map<Long, List<StudentDTO>>
 
     /**
      * получение не прошедших отбор студентов
@@ -44,7 +44,7 @@ interface DistributionService {
      * @param year год
      * @return Map<Универсиет></Универсиет>, Студенты>
      */
-    fun getLoserStudents(semester: Semester, year: Int): Map<String, List<StudentDTO>>
+    fun getLoserStudents(semester: Semester, year: Int): Map<Long, List<StudentDTO>>
 
     /**
      * формирование отчета по направлениям
