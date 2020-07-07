@@ -1,9 +1,6 @@
 package com.oneightwo.scholarship_distribution_v2.distribution_service.service.impl
 
-import com.oneightwo.scholarship_distribution_v2.constants.LOCALHOST
-import com.oneightwo.scholarship_distribution_v2.constants.SCIENCE_DIRECTIONS_URL
-import com.oneightwo.scholarship_distribution_v2.constants.STUDENTS_URL
-import com.oneightwo.scholarship_distribution_v2.constants.UNIVERSITIES_URL
+import com.oneightwo.scholarship_distribution_v2.constants.*
 import com.oneightwo.scholarship_distribution_v2.distribution_service.service.DataService
 import com.oneightwo.scholarship_distribution_v2.models.ScienceDirectionDTO
 import com.oneightwo.scholarship_distribution_v2.models.StudentDTO
@@ -41,8 +38,11 @@ class DataServiceImpl : DataService {
         return responseEntity.body ?: listOf()
     }
 
-    override fun getStudentByMonthAndYear(): List<StudentDTO> {
-        val responseEntity = restTemplate.exchange("$LOCALHOST:7447$STUDENTS_URL",
+    override fun getStudentByMonthAndYear(
+        semester: Semester,
+        year: Int
+    ): List<StudentDTO> {
+        val responseEntity = restTemplate.exchange("$LOCALHOST:7447$STUDENTS_URL?semester=${semester.name}&year=${year}",
             HttpMethod.GET,
             null,
             object : ParameterizedTypeReference<List<StudentDTO>>() {}

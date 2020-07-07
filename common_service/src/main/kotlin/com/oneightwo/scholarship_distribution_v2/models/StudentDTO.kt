@@ -59,7 +59,7 @@ class StudentDTO(
 
     val c15: Int = 0,
 
-    var rating: Float = 0F,
+    var rating: Int = 0,
 
     val isValid: Boolean = false
 ) : Serializable

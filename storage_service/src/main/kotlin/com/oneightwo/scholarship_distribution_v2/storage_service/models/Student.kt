@@ -88,7 +88,7 @@ class Student(
         var c15: Int = 0,
 
         @Column(nullable = false)
-        var rating: Float = 0F,
+        var rating: Int = 0,
 
         @Column(nullable = false)
         var data_registration: LocalDateTime,

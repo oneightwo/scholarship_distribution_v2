@@ -1,64 +1,56 @@
 package com.oneightwo.scholarship_distribution_v2.distribution_service.service
 
 import com.oneightwo.scholarship_distribution_v2.constants.Semester
-import com.oneightwo.scholarship_distribution_v2.distribution_service.constants.KEF
-import com.oneightwo.scholarship_distribution_v2.distribution_service.constants.UR
-import com.oneightwo.scholarship_distribution_v2.distribution_service.constants.VK
+import com.oneightwo.scholarship_distribution_v2.distribution_service.constants.*
 import com.oneightwo.scholarship_distribution_v2.models.StudentDTO
+import org.springframework.beans.factory.annotation.Autowired
 import kotlin.math.roundToInt
 
+abstract class DistributionService {
 
-interface DistributionService {
-    /**
-     * расчет рейтинга по критериям
-     * @param criteria массив критериев длиной 15, диапазоном 0-5
-     * @return рейтинг
-     */
-    fun calculationRating(criteria: IntArray): Int {
+    @Autowired
+    protected lateinit var dataService: DataService
+
+    protected fun calculationRating(criteria: IntArray): Int {
         var rating = 0.0
-        for (i in criteria.indices) {
+        criteria.indices.forEach { i ->
             rating += KEF[VK[i]] * UR[criteria[i]]
         }
         return rating.roundToInt()
     }
 
-    /**
-     * распределение стипендий внутри направлений по университемам
-     * @param semester семестр распределения
-     * @param year год распределения
-     * @return Map<Направление></Направление>, Map<Университет></Университет>, Кол-во стипендий>>
-     */
-    fun getCountScholarshipsByDirectionAndUniversities(semester: Semester, year: Int): Map<Long, Map<Long, Long>>
+    fun execute(semester: Semester, year: Int, withoutCheck: Boolean = false): Map<Long, Map<Long, List<StudentDTO>>> {
+        val students = dataService.getStudentByMonthAndYear(semester, year)
+        val studentsByDirection = divisionStudentsByDirection(students)
+        val studentsAfterSeparation = selectionByMinimalRating(studentsByDirection, withoutCheck)[Type.PASSED]!!
+        val scholarshipByDirection = distributionScholarshipByDirection(studentsAfterSeparation)
+        val studentsUniversitiesByDirection = divisionStudentsUniversitiesByDirection(studentsAfterSeparation)
+        val scholarshipByUniversitiesIntoDirection =
+            distributionScholarshipByUniversitiesIntoDirection(studentsUniversitiesByDirection, scholarshipByDirection)
+        return getListWinningStudents(studentsUniversitiesByDirection, scholarshipByUniversitiesIntoDirection)
+    }
 
-    /**
-     * получение студентов победителей
-     * @param semester семестр
-     * @param year год
-     * @return Map<Универсиет></Универсиет>, Студенты>
-     */
-    fun getWinnerStudents(semester: Semester, year: Int): Map<Long, List<StudentDTO>>
+    protected abstract fun divisionStudentsByDirection(students: List<StudentDTO>): Map<Long, List<StudentDTO>>
 
-    /**
-     * получение не прошедших отбор студентов
-     * @param semester семестр
-     * @param year год
-     * @return Map<Универсиет></Универсиет>, Студенты>
-     */
-    fun getLoserStudents(semester: Semester, year: Int): Map<Long, List<StudentDTO>>
+    protected abstract fun selectionByMinimalRating(
+        students: Map<Long, List<StudentDTO>>,
+        withoutCheck: Boolean
+    ): Map<Type, Map<Long, List<StudentDTO>>>
 
-    /**
-     * формирование отчета по направлениям
-     * @param semester семестр
-     * @param year год
-     * @return List<Map></Map><Направление></Направление>, Значение>>
-     */
-    fun getReportByDirection(semester: Semester, year: Int): List<Map<String, String>>
+    protected abstract fun distributionScholarshipByDirection(
+        students: Map<Long, List<StudentDTO>>,
+        quantity: Int = NUMBER_SCHOLARSHIPS
+    ): Map<Long, Int>
 
-    /**
-     * формирование отчета внутри напрвления по университетам
-     * @param semester семестер
-     * @param year год
-     * @return Map<Направление></Направление>, List<Map></Map><Университет></Университет>, Значение>>>
-     */
-    fun getReportByDirectionAndUniversities(semester: Semester, year: Int): Map<String, List<Map<String, String>>>
+    protected abstract fun divisionStudentsUniversitiesByDirection(students: Map<Long, List<StudentDTO>>): Map<Long, Map<Long, List<StudentDTO>>>
+
+    protected abstract fun distributionScholarshipByUniversitiesIntoDirection(
+        students: Map<Long, Map<Long, List<StudentDTO>>>,
+        quantityMap: Map<Long, Int>
+    ): Map<Long, Map<Long, Int>>
+
+    protected abstract fun getListWinningStudents(
+        students: Map<Long, Map<Long, List<StudentDTO>>>,
+        scholarships: Map<Long, Map<Long, Int>>
+    ): Map<Long, Map<Long, List<StudentDTO>>>
 }
