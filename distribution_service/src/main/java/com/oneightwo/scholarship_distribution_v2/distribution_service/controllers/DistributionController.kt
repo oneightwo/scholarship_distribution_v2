@@ -19,7 +19,7 @@ class DistributionController {
 
     @GetMapping
     fun getAll(): ResponseEntity<Any> {
-        distributionService.divisionStudentsByDirection()
+        distributionService.execute()
         distributionService1
     }
 
